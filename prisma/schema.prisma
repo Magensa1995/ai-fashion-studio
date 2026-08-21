@@ -1,0 +1,271 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum ProductStatus {
+  ACTIVE
+  ARCHIVED
+}
+
+enum ModelStatus {
+  ACTIVE
+  ARCHIVED
+}
+
+enum MediaKind {
+  UPLOAD
+  PRODUCT
+  MODEL
+  GENERATED
+  POST
+}
+
+enum MediaStatus {
+  DRAFT
+  READY
+  FAILED
+}
+
+enum ProductImageType {
+  FRONT
+  BACK
+  DETAIL
+  OTHER
+}
+
+enum GenerationType {
+  PRODUCT_TO_MODEL
+  VIRTUAL_TRY_ON
+  IMAGE_EDIT
+  BACKGROUND_REPLACE
+  VARIATION
+}
+
+enum GenerationStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+enum PostStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+model User {
+  id                String             @id @default(cuid())
+  email             String             @unique
+  passwordHash      String
+  name              String?
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  products          Product[]
+  modelProfiles     ModelProfile[]
+  media             Media[]
+  generations       Generation[]
+  generationPresets GenerationPreset[]
+  posts             Post[]
+}
+
+model Product {
+  id          String         @id @default(cuid())
+  userId      String
+  name        String
+  slug        String
+  description String?        @db.Text
+  category    String?
+  status      ProductStatus  @default(ACTIVE)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  deletedAt   DateTime?
+  user        User           @relation(fields: [userId], references: [id], onDelete: Restrict)
+  images      ProductImage[]
+  generations Generation[]
+
+  @@unique([userId, slug])
+  @@index([userId, status, createdAt])
+}
+
+model ProductImage {
+  id        String           @id @default(cuid())
+  productId String
+  mediaId   String
+  type      ProductImageType @default(OTHER)
+  sortOrder Int              @default(0)
+  product   Product          @relation(fields: [productId], references: [id], onDelete: Restrict)
+  media     Media            @relation(fields: [mediaId], references: [id], onDelete: Restrict)
+
+  @@unique([productId, mediaId])
+  @@index([productId, sortOrder])
+}
+
+model ModelProfile {
+  id          String       @id @default(cuid())
+  userId      String
+  name        String
+  description String?      @db.Text
+  status      ModelStatus  @default(ACTIVE)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  deletedAt   DateTime?
+  user        User         @relation(fields: [userId], references: [id], onDelete: Restrict)
+  images      ModelImage[]
+  generations Generation[]
+
+  @@index([userId, status, createdAt])
+}
+
+model ModelImage {
+  id             String       @id @default(cuid())
+  modelProfileId String
+  mediaId        String
+  sortOrder      Int          @default(0)
+  modelProfile   ModelProfile @relation(fields: [modelProfileId], references: [id], onDelete: Restrict)
+  media          Media        @relation(fields: [mediaId], references: [id], onDelete: Restrict)
+
+  @@unique([modelProfileId, mediaId])
+  @@index([modelProfileId, sortOrder])
+}
+
+model Media {
+  id                String           @id @default(cuid())
+  userId            String
+  kind              MediaKind
+  status            MediaStatus      @default(DRAFT)
+  storageKey        String           @unique
+  originalFilename  String
+  mimeType          String
+  sizeBytes         Int
+  width             Int?
+  height            Int?
+  checksum          String?
+  metadata          Json             @default("{}")
+  finalizedAt       DateTime?
+  createdAt         DateTime         @default(now())
+  deletedAt         DateTime?
+  user              User             @relation(fields: [userId], references: [id], onDelete: Restrict)
+  productImages     ProductImage[]
+  modelImages       ModelImage[]
+  sourceGenerations Generation[]     @relation("GenerationSourceMedia")
+  generatedImages   GeneratedImage[]
+  coverPosts        Post[]           @relation("PostCover")
+  postMedia         PostMedia[]
+
+  @@index([userId, kind, status, createdAt])
+  @@index([userId, deletedAt])
+}
+
+model Generation {
+  id                String            @id @default(cuid())
+  userId            String
+  type              GenerationType
+  status            GenerationStatus  @default(PENDING)
+  productId         String?
+  modelProfileId    String?
+  sourceMediaId     String?
+  presetId          String?
+  retryOfId         String?
+  promptData        Json
+  provider          String
+  providerModel     String
+  aspectRatio       String
+  imageCount        Int               @default(2)
+  providerRequestId String?
+  errorCode         String?
+  errorMessage      String?           @db.Text
+  startedAt         DateTime?
+  completedAt       DateTime?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  user              User              @relation(fields: [userId], references: [id], onDelete: Restrict)
+  product           Product?          @relation(fields: [productId], references: [id], onDelete: Restrict)
+  modelProfile      ModelProfile?     @relation(fields: [modelProfileId], references: [id], onDelete: Restrict)
+  sourceMedia       Media?            @relation("GenerationSourceMedia", fields: [sourceMediaId], references: [id], onDelete: Restrict)
+  preset            GenerationPreset? @relation(fields: [presetId], references: [id], onDelete: SetNull)
+  retryOf           Generation?       @relation("GenerationRetries", fields: [retryOfId], references: [id], onDelete: Restrict)
+  retries           Generation[]      @relation("GenerationRetries")
+  generatedImages   GeneratedImage[]
+  posts             Post[]
+
+  @@index([userId, status, createdAt])
+  @@index([userId, type, createdAt])
+  @@index([productId])
+  @@index([modelProfileId])
+  @@index([sourceMediaId])
+  @@index([retryOfId])
+}
+
+model GeneratedImage {
+  id           String     @id @default(cuid())
+  generationId String
+  mediaId      String
+  sortOrder    Int        @default(0)
+  isFavorite   Boolean    @default(false)
+  createdAt    DateTime   @default(now())
+  generation   Generation @relation(fields: [generationId], references: [id], onDelete: Restrict)
+  media        Media      @relation(fields: [mediaId], references: [id], onDelete: Restrict)
+
+  @@unique([generationId, sortOrder])
+  @@unique([generationId, mediaId])
+  @@index([generationId, isFavorite])
+}
+
+model GenerationPreset {
+  id          String         @id @default(cuid())
+  userId      String
+  name        String
+  type        GenerationType
+  settings    Json
+  isDefault   Boolean        @default(false)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  user        User           @relation(fields: [userId], references: [id], onDelete: Restrict)
+  generations Generation[]
+
+  @@unique([userId, name])
+  @@index([userId, type, isDefault])
+}
+
+model Post {
+  id                 String      @id @default(cuid())
+  userId             String
+  title              String
+  slug               String
+  excerpt            String?     @db.Text
+  content            String      @db.Text
+  status             PostStatus  @default(DRAFT)
+  coverMediaId       String?
+  sourceGenerationId String?
+  socialMetadata     Json?
+  createdAt          DateTime    @default(now())
+  updatedAt          DateTime    @updatedAt
+  publishedAt        DateTime?
+  deletedAt          DateTime?
+  user               User        @relation(fields: [userId], references: [id], onDelete: Restrict)
+  coverMedia         Media?      @relation("PostCover", fields: [coverMediaId], references: [id], onDelete: Restrict)
+  sourceGeneration   Generation? @relation(fields: [sourceGenerationId], references: [id], onDelete: Restrict)
+  media              PostMedia[]
+
+  @@unique([userId, slug])
+  @@index([userId, status, createdAt])
+  @@index([coverMediaId])
+  @@index([sourceGenerationId])
+}
+
+model PostMedia {
+  postId    String
+  mediaId   String
+  sortOrder Int    @default(0)
+  post      Post   @relation(fields: [postId], references: [id], onDelete: Restrict)
+  media     Media  @relation(fields: [mediaId], references: [id], onDelete: Restrict)
+
+  @@id([postId, mediaId])
+  @@index([postId, sortOrder])
+}
