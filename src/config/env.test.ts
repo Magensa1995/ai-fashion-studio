@@ -17,6 +17,16 @@ describe("parseServerEnv", () => {
     ).toBeUndefined();
   });
 
+  it("accepts only explicit boolean values for the Auth.js host trust setting", () => {
+    expect(parseServerEnv({ AUTH_TRUST_HOST: "true" }).AUTH_TRUST_HOST).toBe(
+      true,
+    );
+    expect(parseServerEnv({ AUTH_TRUST_HOST: "false" }).AUTH_TRUST_HOST).toBe(
+      false,
+    );
+    expect(() => parseServerEnv({ AUTH_TRUST_HOST: "yes" })).toThrow();
+  });
+
   it("requires valid owner bootstrap credentials", () => {
     expect(
       parseOwnerBootstrapEnv({

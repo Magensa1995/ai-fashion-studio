@@ -26,8 +26,10 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run",
-    "test:watch": "vitest",
+    "test:base": "vitest --exclude src/server/auth/runtime.integration.test.ts",
+    "test": "pnpm test:base run",
+    "test:runtime": "pnpm build && pnpm exec vitest run src/server/auth/runtime.integration.test.ts",
+    "test:watch": "pnpm test:base",
     "test:e2e": "playwright test"
   },
   "dependencies": {
@@ -39,6 +41,7 @@
     "dotenv": "^17.4.2",
     "lucide-react": "latest",
     "next": "latest",
+    "next-auth": "5.0.0-beta.32",
     "pg": "^8.23.0",
     "react": "latest",
     "react-dom": "latest",

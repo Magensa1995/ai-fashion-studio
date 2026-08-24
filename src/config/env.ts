@@ -8,6 +8,13 @@ const optionalUrl = z.preprocess(
   (value) => (value === "" ? undefined : value),
   z.url().optional(),
 );
+const optionalBoolean = z.preprocess(
+  (value) => (value === "" ? undefined : value),
+  z
+    .enum(["true", "false"])
+    .transform((value) => value === "true")
+    .optional(),
+);
 
 const serverEnvSchema = z.object({
   NODE_ENV: z
@@ -15,6 +22,7 @@ const serverEnvSchema = z.object({
     .default("development"),
   DATABASE_URL: optionalUrl,
   AUTH_SECRET: optionalString,
+  AUTH_TRUST_HOST: optionalBoolean,
   OWNER_EMAIL: optionalString,
   OWNER_PASSWORD: optionalString,
   R2_ACCOUNT_ID: optionalString,

@@ -17,23 +17,24 @@ The health route is intentionally a process liveness check. It does not call Pos
 
 ## Environment inventory
 
-| Variable               | Phase required | Purpose                                                          |
-| ---------------------- | -------------: | ---------------------------------------------------------------- |
-| `NODE_ENV=production`  |              0 | Enables production runtime behavior.                             |
-| `DATABASE_URL`         |              0 | Railway PostgreSQL reference variable; server-only.              |
-| `AUTH_SECRET`          |              1 | Auth.js signing/encryption secret.                               |
-| `OWNER_EMAIL`          |              1 | One-time owner bootstrap input.                                  |
-| `OWNER_PASSWORD`       |              1 | One-time owner bootstrap input; remove or rotate after use.      |
-| `R2_ACCOUNT_ID`        |              2 | Cloudflare account identifier.                                   |
-| `R2_ACCESS_KEY_ID`     |              2 | R2 server credential.                                            |
-| `R2_SECRET_ACCESS_KEY` |              2 | R2 server credential.                                            |
-| `R2_BUCKET`            |              2 | Object bucket name.                                              |
-| `R2_PUBLIC_BASE_URL`   |              2 | Optional public asset base URL.                                  |
-| `OPENAI_API_KEY`       |              4 | OpenAI server credential.                                        |
-| `OPENAI_IMAGE_MODEL`   |              4 | Image model override; defaults are documented in `.env.example`. |
-| `OPENAI_TEXT_MODEL`    |              4 | Text model override.                                             |
+| Variable               | Phase required | Purpose                                                                                                                                                                          |
+| ---------------------- | -------------: | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `NODE_ENV=production`  |              0 | Enables production runtime behavior.                                                                                                                                             |
+| `DATABASE_URL`         |              0 | Railway PostgreSQL reference variable; server-only.                                                                                                                              |
+| `AUTH_SECRET`          |              1 | Auth.js signing/encryption secret.                                                                                                                                               |
+| `AUTH_TRUST_HOST=true` |              1 | Explicitly trusts the `Host` header supplied by Railway's managed reverse proxy. Set this only for the Railway service; it must not be enabled for an arbitrary untrusted proxy. |
+| `OWNER_EMAIL`          |              1 | One-time owner bootstrap input.                                                                                                                                                  |
+| `OWNER_PASSWORD`       |              1 | One-time owner bootstrap input; remove or rotate after use.                                                                                                                      |
+| `R2_ACCOUNT_ID`        |              2 | Cloudflare account identifier.                                                                                                                                                   |
+| `R2_ACCESS_KEY_ID`     |              2 | R2 server credential.                                                                                                                                                            |
+| `R2_SECRET_ACCESS_KEY` |              2 | R2 server credential.                                                                                                                                                            |
+| `R2_BUCKET`            |              2 | Object bucket name.                                                                                                                                                              |
+| `R2_PUBLIC_BASE_URL`   |              2 | Optional public asset base URL.                                                                                                                                                  |
+| `OPENAI_API_KEY`       |              4 | OpenAI server credential.                                                                                                                                                        |
+| `OPENAI_IMAGE_MODEL`   |              4 | Image model override; defaults are documented in `.env.example`.                                                                                                                 |
+| `OPENAI_TEXT_MODEL`    |              4 | Text model override.                                                                                                                                                             |
 
-Railway supplies `PORT`; do not hard-code it. No secret may use a `NEXT_PUBLIC_` prefix.
+Railway supplies `PORT`; do not hard-code it. Auth.js rejects production requests unless the host is trusted: set `AUTH_TRUST_HOST=true` only after the application is deployed behind Railway's managed reverse proxy, which owns the public `Host` header. The application validates this setting as a boolean and passes it explicitly to Auth.js; it never enables host trust by default. No secret may use a `NEXT_PUBLIC_` prefix.
 
 ## Deployment behavior
 
@@ -49,6 +50,8 @@ Do not run migrations from the start command. A failed pre-deploy migration stop
 
 ```text
 GET <staging-url>/api/health -> 200, {"status":"ok"}
+GET <staging-url>/api/auth/providers -> 200, credentials provider present
+GET <staging-url>/api/auth/session -> 200, null before sign-in
 GET <staging-url>/            -> 200, landing heading visible
 Railway deployment logs      -> migration applied or no pending migrations
 Railway variables            -> no NEXT_PUBLIC_* secret names

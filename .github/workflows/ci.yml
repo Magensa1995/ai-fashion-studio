@@ -16,6 +16,8 @@ jobs:
     timeout-minutes: 20
     env:
       CI: "true"
+      AUTH_SECRET: "test-auth-secret-with-at-least-32-characters"
+      AUTH_TRUST_HOST: "true"
       DATABASE_URL: postgresql://studio:studio@127.0.0.1:5432/studio_test?schema=public
       TEST_DATABASE_URL: postgresql://studio:studio@127.0.0.1:5432/studio_test?schema=public
     services:
@@ -73,8 +75,8 @@ jobs:
       - name: Run unit and integration tests
         run: pnpm test
 
-      - name: Build production application
-        run: pnpm build
+      - name: Build and run production Auth.js route tests
+        run: pnpm test:runtime
 
       - name: Install Playwright Chromium
         run: pnpm exec playwright install --with-deps chromium
