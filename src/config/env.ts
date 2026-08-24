@@ -27,6 +27,11 @@ const serverEnvSchema = z.object({
   OPENAI_TEXT_MODEL: optionalString,
 });
 
+const ownerBootstrapEnvSchema = z.object({
+  OWNER_EMAIL: z.string().trim().email(),
+  OWNER_PASSWORD: z.string().min(1),
+});
+
 const forbiddenPublicSecrets = [
   "NEXT_PUBLIC_DATABASE_URL",
   "NEXT_PUBLIC_AUTH_SECRET",
@@ -52,6 +57,12 @@ export function parseServerEnv(
   }
 
   return serverEnvSchema.parse(source);
+}
+
+export function parseOwnerBootstrapEnv(
+  source: Record<string, string | undefined>,
+) {
+  return ownerBootstrapEnvSchema.parse(source);
 }
 
 let cachedEnv: ServerEnv | undefined;

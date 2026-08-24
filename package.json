@@ -10,6 +10,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "bootstrap:owner": "node --conditions=react-server --import tsx scripts/bootstrap-owner.ts",
     "db:diff": "prisma migrate diff",
     "db:format": "prisma format",
     "db:generate": "prisma generate",
