@@ -10,9 +10,10 @@ import { Button } from "@/components/ui/button";
 
 type LoginFormProps = {
   action: LoginAction;
+  callbackUrl: string;
 };
 
-export function LoginForm({ action }: LoginFormProps) {
+export function LoginForm({ action, callbackUrl }: LoginFormProps) {
   const [state, formAction, pending] = useActionState(
     action,
     emptyLoginFormState,
@@ -26,6 +27,7 @@ export function LoginForm({ action }: LoginFormProps) {
       className="grid gap-5"
       noValidate={false}
     >
+      <input name="callbackUrl" type="hidden" value={callbackUrl} />
       <div className="grid gap-2">
         <label className="text-sm font-medium" htmlFor="email">
           Email

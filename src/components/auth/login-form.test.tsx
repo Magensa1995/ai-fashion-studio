@@ -15,8 +15,8 @@ import {
 } from "@/app/(auth)/login/login-state";
 import { LoginForm } from "@/components/auth/login-form";
 
-function renderLoginForm(action: LoginAction) {
-  render(<LoginForm action={action} />);
+function renderLoginForm(action: LoginAction, callbackUrl = "/") {
+  render(<LoginForm action={action} callbackUrl={callbackUrl} />);
   const form = screen.getByRole("form", { name: "Sign in form" });
 
   return {
@@ -45,6 +45,15 @@ describe("LoginForm", () => {
     expect(password).toBeRequired();
     expect((email as HTMLInputElement).checkValidity()).toBe(false);
     expect((password as HTMLInputElement).checkValidity()).toBe(false);
+  });
+
+  it("submits the server-normalized callback as hidden form data", () => {
+    const action = vi.fn<LoginAction>();
+    const { form } = renderLoginForm(action, "/?campaign=draft");
+
+    expect(
+      form.querySelector<HTMLInputElement>('input[name="callbackUrl"]'),
+    ).toHaveValue("/?campaign=draft");
   });
 
   it("announces the server's generic invalid-credentials message", async () => {

@@ -2,13 +2,37 @@ import { redirect } from "next/navigation";
 
 import { login } from "@/app/(auth)/login/actions";
 import { LoginForm } from "@/components/auth/login-form";
-import { auth } from "@/server/auth/runtime";
+import {
+  requireUser,
+  safeCallbackPath,
+  UnauthorizedError,
+} from "@/server/auth/session";
 
-export default async function LoginPage() {
-  const session = await auth();
+type LoginPageProps = {
+  searchParams?: Promise<{
+    callbackUrl?: string | string[];
+  }>;
+};
 
-  if (session?.user?.id) {
-    redirect("/");
+export default async function LoginPage({
+  searchParams = Promise.resolve({}),
+}: LoginPageProps = {}) {
+  const params = await searchParams;
+  const callbackUrl = safeCallbackPath(params.callbackUrl);
+  let isAuthenticated = true;
+
+  try {
+    await requireUser();
+  } catch (error) {
+    if (!(error instanceof UnauthorizedError)) {
+      throw error;
+    }
+
+    isAuthenticated = false;
+  }
+
+  if (isAuthenticated) {
+    redirect(callbackUrl);
   }
 
   return (
@@ -22,7 +46,7 @@ export default async function LoginPage() {
           Use the owner credentials configured for AI Fashion Studio.
         </p>
         <div className="mt-8">
-          <LoginForm action={login} />
+          <LoginForm action={login} callbackUrl={callbackUrl} />
         </div>
       </section>
     </main>

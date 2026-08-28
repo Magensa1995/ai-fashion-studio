@@ -102,11 +102,66 @@ describe("createLoginAction", () => {
       login(
         emptyLoginFormState,
         formData({
+          callbackUrl: "/?campaign=draft",
           email: "owner@example.com",
           password: "owner-passphrase-2026",
         }),
       ),
     ).rejects.toBe(redirect);
+    expect(signIn).toHaveBeenCalledWith("credentials", {
+      email: "owner@example.com",
+      password: "owner-passphrase-2026",
+      redirectTo: "/?campaign=draft",
+    });
+  });
+
+  it("passes a safe callback query and hash through to Auth.js", async () => {
+    const redirect = Object.assign(new Error("NEXT_REDIRECT"), {
+      digest: "NEXT_REDIRECT;replace;/;303;",
+    });
+    const signIn = vi.fn().mockRejectedValue(redirect);
+    const login = createLoginAction(signIn);
+    const callbackUrl = "/studio?step=2&filter=latest#reference";
+
+    await expect(
+      login(
+        emptyLoginFormState,
+        formData({
+          callbackUrl,
+          email: "owner@example.com",
+          password: "owner-passphrase-2026",
+        }),
+      ),
+    ).rejects.toBe(redirect);
+    expect(signIn).toHaveBeenCalledWith("credentials", {
+      email: "owner@example.com",
+      password: "owner-passphrase-2026",
+      redirectTo: callbackUrl,
+    });
+  });
+
+  it("never passes an unsafe callback destination to Auth.js", async () => {
+    const redirect = Object.assign(new Error("NEXT_REDIRECT"), {
+      digest: "NEXT_REDIRECT;replace;/;303;",
+    });
+    const signIn = vi.fn().mockRejectedValue(redirect);
+    const login = createLoginAction(signIn);
+
+    await expect(
+      login(
+        emptyLoginFormState,
+        formData({
+          callbackUrl: "https://attacker.example/steal",
+          email: "owner@example.com",
+          password: "owner-passphrase-2026",
+        }),
+      ),
+    ).rejects.toBe(redirect);
+    expect(signIn).toHaveBeenCalledWith("credentials", {
+      email: "owner@example.com",
+      password: "owner-passphrase-2026",
+      redirectTo: "/",
+    });
   });
 
   it("does not treat redirect-like lookalikes as successful redirects", async () => {

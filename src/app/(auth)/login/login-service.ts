@@ -1,6 +1,7 @@
 import "server-only";
 
 import type { LoginAction } from "@/app/(auth)/login/login-state";
+import { safeCallbackPath } from "@/server/auth/session";
 
 type SignIn = (
   provider: "credentials",
@@ -57,6 +58,7 @@ export function createLoginAction(signIn: SignIn): LoginAction {
   return async (_previousState, formData) => {
     const email = requiredString(formData, "email");
     const password = requiredString(formData, "password");
+    const redirectTo = safeCallbackPath(formData.get("callbackUrl"));
     const fieldErrors: { email?: string; password?: string } = {};
 
     if (!email) {
@@ -72,7 +74,7 @@ export function createLoginAction(signIn: SignIn): LoginAction {
     }
 
     try {
-      await signIn("credentials", { email, password, redirectTo: "/" });
+      await signIn("credentials", { email, password, redirectTo });
     } catch (error) {
       if (isRedirectError(error)) {
         throw error;

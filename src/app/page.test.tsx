@@ -1,12 +1,16 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import HomePage from "@/app/page";
+import HomePage from "@/app/(dashboard)/page";
 
-const { authMock } = vi.hoisted(() => ({
+const { authMock, headersMock, redirectMock } = vi.hoisted(() => ({
   authMock: vi.fn(),
+  headersMock: vi.fn(),
+  redirectMock: vi.fn(),
 }));
 
+vi.mock("next/headers", () => ({ headers: headersMock }));
+vi.mock("next/navigation", () => ({ redirect: redirectMock }));
 vi.mock("@/server/auth/runtime", () => ({
   auth: authMock,
 }));
@@ -15,15 +19,23 @@ describe("HomePage", () => {
   beforeEach(() => {
     cleanup();
     authMock.mockReset();
+    headersMock.mockReset();
+    redirectMock.mockReset();
+    headersMock.mockResolvedValue(new Headers());
   });
 
-  async function renderHomePage(session: { user?: { id?: string } } | null) {
+  async function renderHomePage(
+    session: { expires?: string; user?: { id?: string } } | null,
+  ) {
     authMock.mockResolvedValue(session);
     render(await HomePage());
   }
 
   it("introduces the studio and its foundation status", async () => {
-    await renderHomePage(null);
+    await renderHomePage({
+      expires: "2099-08-24T00:00:00.000Z",
+      user: { id: "owner-1" },
+    });
 
     expect(
       screen.getByRole("heading", { name: "AI Fashion Studio" }),
@@ -31,26 +43,57 @@ describe("HomePage", () => {
     expect(screen.getByText("Foundation in progress")).toBeInTheDocument();
   });
 
-  it("shows a sign-in action instead of sign-out for anonymous visitors", async () => {
-    await renderHomePage(null);
+  it("redirects an anonymous page render to login with the current path", async () => {
+    const redirectError = new Error("NEXT_REDIRECT");
 
-    expect(screen.getByRole("link", { name: "Sign in" })).toHaveAttribute(
-      "href",
-      "/login",
+    authMock.mockResolvedValue(null);
+    headersMock.mockResolvedValue(
+      new Headers({
+        "x-ai-fashion-private-path": "/studio?step=2&filter=latest",
+      }),
     );
-    expect(
-      screen.queryByRole("button", { name: "Sign out" }),
-    ).not.toBeInTheDocument();
+    redirectMock.mockImplementation(() => {
+      throw redirectError;
+    });
+
+    await expect(HomePage()).rejects.toBe(redirectError);
+    expect(redirectMock).toHaveBeenCalledWith(
+      "/login?callbackUrl=%2Fstudio%3Fstep%3D2%26filter%3Dlatest",
+    );
   });
 
-  it("shows the sign-out action only for authenticated owners", async () => {
-    await renderHomePage({ user: { id: "owner-1" } });
+  it("redirects an expired session at the protected page boundary", async () => {
+    const redirectError = new Error("NEXT_REDIRECT");
+
+    authMock.mockResolvedValue({
+      expires: "2026-08-24T00:00:00.000Z",
+      user: { id: "owner-1" },
+    });
+    redirectMock.mockImplementation(() => {
+      throw redirectError;
+    });
+
+    await expect(HomePage()).rejects.toBe(redirectError);
+    expect(redirectMock).toHaveBeenCalledWith("/login?callbackUrl=%2F");
+  });
+
+  it("propagates dashboard session infrastructure failures", async () => {
+    const sessionFailure = new Error("session store unavailable");
+
+    authMock.mockRejectedValue(sessionFailure);
+
+    await expect(HomePage()).rejects.toBe(sessionFailure);
+    expect(redirectMock).not.toHaveBeenCalled();
+  });
+
+  it("shows the sign-out action for an authenticated owner", async () => {
+    await renderHomePage({
+      expires: "2099-08-24T00:00:00.000Z",
+      user: { id: "owner-1" },
+    });
 
     expect(
       screen.getByRole("button", { name: "Sign out" }),
     ).toBeInTheDocument();
-    expect(
-      screen.queryByRole("link", { name: "Sign in" }),
-    ).not.toBeInTheDocument();
   });
 });

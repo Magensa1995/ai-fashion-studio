@@ -1,16 +1,21 @@
 import "server-only";
 
+import { cache } from "react";
+
 type SessionReader = () => Promise<{
+  expires?: string;
   user?: {
     id?: string;
   };
 } | null>;
 
-async function readSession() {
+export { buildLoginRedirect, safeCallbackPath } from "@/server/auth/callback";
+
+const readSession = cache(async () => {
   const { auth } = await import("@/server/auth/runtime");
 
   return auth();
-}
+});
 
 export class UnauthorizedError extends Error {
   readonly code = "UNAUTHORIZED";
@@ -22,11 +27,21 @@ export class UnauthorizedError extends Error {
   }
 }
 
-export async function requireUser(sessionReader: SessionReader = readSession) {
+export async function requireUser(
+  sessionReader: SessionReader = readSession,
+  now = new Date(),
+) {
   const session = await sessionReader();
   const userId = session?.user?.id;
+  const expiresAt = session?.expires
+    ? new Date(session.expires).getTime()
+    : Number.NaN;
 
-  if (typeof userId !== "string") {
+  if (
+    typeof userId !== "string" ||
+    !Number.isFinite(expiresAt) ||
+    expiresAt <= now.getTime()
+  ) {
     throw new UnauthorizedError();
   }
 

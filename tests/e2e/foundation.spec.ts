@@ -1,12 +1,10 @@
 import { expect, test } from "@playwright/test";
 
-test("renders the foundation landing route", async ({ page }) => {
+test("redirects the anonymous dashboard route to sign in", async ({ page }) => {
   await page.goto("/");
 
-  await expect(
-    page.getByRole("heading", { name: "AI Fashion Studio" }),
-  ).toBeVisible();
-  await expect(page.getByText("Foundation in progress")).toBeVisible();
+  await expect(page).toHaveURL(/\/login\?callbackUrl=%2F$/);
+  await expect(page.getByRole("heading", { name: "Sign in" })).toBeVisible();
 });
 
 test("serves the deployment health check", async ({ request }) => {

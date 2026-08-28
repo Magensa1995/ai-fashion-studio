@@ -1,13 +1,11 @@
 import { ArrowRight, Images, Shirt, Sparkles } from "lucide-react";
-import Link from "next/link";
 
 import { logout } from "@/app/(auth)/login/actions";
 import { Button } from "@/components/ui/button";
-import { auth } from "@/server/auth/runtime";
+import { requireDashboardUser } from "@/app/(dashboard)/guard";
 
 export default async function HomePage() {
-  const session = await auth();
-  const isAuthenticated = Boolean(session?.user?.id);
+  await requireDashboardUser();
 
   return (
     <main className="mx-auto flex min-h-screen max-w-6xl flex-col justify-center px-6 py-16 lg:px-8">
@@ -35,17 +33,11 @@ export default async function HomePage() {
           Open studio
           <ArrowRight aria-hidden="true" />
         </Button>
-        {isAuthenticated ? (
-          <form action={logout}>
-            <Button type="submit" variant="outline">
-              Sign out
-            </Button>
-          </form>
-        ) : (
-          <Button asChild variant="outline">
-            <Link href="/login">Sign in</Link>
+        <form action={logout}>
+          <Button type="submit" variant="outline">
+            Sign out
           </Button>
-        )}
+        </form>
         <span className="text-muted-foreground self-center text-sm">
           Workspace access arrives in Phase 1.
         </span>
