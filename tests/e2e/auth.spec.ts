@@ -71,7 +71,9 @@ test.describe("owner authentication", () => {
     await loginForm.getByRole("button", { name: "Sign in" }).click();
     await expect(page).toHaveURL(/\/$/);
 
-    await page.getByRole("button", { name: "Sign out" }).click();
+    const signOutButton = page.getByRole("button", { name: "Sign out" });
+    await expect(signOutButton).toHaveCount(1);
+    await signOutButton.click();
 
     await expect(page).toHaveURL(/\/login$/);
     await expect(page.getByRole("heading", { name: "Sign in" })).toBeVisible();

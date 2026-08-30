@@ -1,9 +1,10 @@
 import { requireDashboardUser } from "@/app/(dashboard)/guard";
+import { AppShell } from "@/components/layout/app-shell";
 
 export default async function DashboardLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
-  await requireDashboardUser();
+  const ownerId = await requireDashboardUser();
 
-  return children;
+  return <AppShell ownerId={ownerId}>{children}</AppShell>;
 }

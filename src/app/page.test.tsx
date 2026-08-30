@@ -85,15 +85,4 @@ describe("HomePage", () => {
     await expect(HomePage()).rejects.toBe(sessionFailure);
     expect(redirectMock).not.toHaveBeenCalled();
   });
-
-  it("shows the sign-out action for an authenticated owner", async () => {
-    await renderHomePage({
-      expires: "2099-08-24T00:00:00.000Z",
-      user: { id: "owner-1" },
-    });
-
-    expect(
-      screen.getByRole("button", { name: "Sign out" }),
-    ).toBeInTheDocument();
-  });
 });
